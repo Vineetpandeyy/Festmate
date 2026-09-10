@@ -1,0 +1,950 @@
+import { useState, useRef } from "react";
+import {
+  Heart, X, MapPin, Calendar, MessageCircle, Bell, User, Users,
+  Sparkles, ChevronLeft, Send, Plus, Check, Pencil, Clock, Flame,
+  BadgeCheck, SlidersHorizontal, MoreVertical, Paperclip, Image as ImageIcon,
+  Film, Eye, Star, Ban, Flag, Camera, Lock, Mail, ShieldCheck,
+} from "lucide-react";
+
+/* ---------- mock data ---------- */
+
+const AVATAR_PALETTE = ["#C2185B", "#E8862E", "#7A1F3D", "#B8722E", "#9C2B5A", "#D9A441", "#8E3B2F"];
+const colorFor = (seed) => AVATAR_PALETTE[seed % AVATAR_PALETTE.length];
+const initials = (name) => name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
+
+const PROFILES = [
+  { id: 1, name: "Meera Trivedi", age: 26, location: "Vesu, Surat", distance: "1.8 km away",
+    bio: "Garba since I could walk. Looking for someone who can actually keep the beat during trikoni raas.",
+    interests: ["Garba", "Dandiya", "Bollywood dance", "Street food"], willMatch: true, verified: true, rating: 4.8, ratingCount: 22, photos: 3 },
+  { id: 2, name: "Kavya Shah", age: 24, location: "Adajan, Surat", distance: "3.2 km away",
+    bio: "Classically trained in Kathak, but Navratri is where I really let loose. Nine nights, zero days off.",
+    interests: ["Kathak", "Garba", "Photography"], willMatch: false, verified: true, rating: 4.5, ratingCount: 11, photos: 2 },
+  { id: 3, name: "Riya Desai", age: 28, location: "Vadodara", distance: "6.5 km away",
+    bio: "I organize a small garba circle every year. Come dance, stay for the fafda after.",
+    interests: ["Garba", "Cooking", "Travel", "Music"], willMatch: true, verified: false, rating: 4.2, ratingCount: 6, photos: 1 },
+  { id: 4, name: "Anjali Patel", age: 23, location: "Ahmedabad", distance: "8.1 km away",
+    bio: "New to the city, new to serious garba. Teach me your spins, I'll bring the energy.",
+    interests: ["Dandiya", "Fitness", "Bollywood dance"], willMatch: false, verified: false, rating: 3.9, ratingCount: 4, photos: 2 },
+  { id: 5, name: "Neha Joshi", age: 27, location: "Piplod, Surat", distance: "2.4 km away",
+    bio: "Been doing the same three steps since childhood and I'm finally ready to learn a fourth.",
+    interests: ["Garba", "Reading", "Chai"], willMatch: false, verified: true, rating: 4.7, ratingCount: 15, photos: 3 },
+];
+
+const defaultGroups = (name) => ([
+  { id: `${name}-g1`, name: `${name} Circle`, members: Math.floor(20 + Math.random() * 200), desc: "Open group, everyone welcome, details shared closer to the day." },
+]);
+
+const FESTIVALS = [
+  { id: "navratri", name: "Navratri", tagline: "Nine nights of garba and dandiya", date: "Oct 11 – Oct 19", daysLeft: 31, kind: "festival",
+    groups: [
+      { id: "g1", name: "United Way Circle", members: 214, desc: "Big open circle, beginners welcome, live dhol most nights." },
+      { id: "g2", name: "Vesu Garba Group", members: 58, desc: "Smaller neighbourhood group, dandiya-focused, meets 8pm." },
+    ] },
+  { id: "diwali", name: "Diwali", tagline: "Find someone for the diyas and the rangoli", date: "Nov 8", daysLeft: 59, kind: "festival",
+    groups: [{ id: "g3", name: "Adajan Diwali Meet", members: 34, desc: "Rangoli contest, sweets, and a small fireworks-free celebration." }] },
+  { id: "holi", name: "Holi", tagline: "Colours, water balloons, and a partner who won't run", date: "Mar 6", daysLeft: 177, kind: "festival",
+    groups: [{ id: "g4", name: "Riverside Holi Crew", members: 122, desc: "Organic colours only, music from noon." }] },
+  { id: "ganesh", name: "Ganesh Chaturthi", tagline: "Ten days of modak, music, and visarjan", date: "Sep 6", daysLeft: 12, kind: "festival", groups: defaultGroups("Ganesh Chaturthi") },
+  { id: "durgapuja", name: "Durga Puja", tagline: "Pandal hopping, better with company", date: "Oct 17", daysLeft: 37, kind: "festival", groups: defaultGroups("Durga Puja") },
+  { id: "eid", name: "Eid", tagline: "Sheer khurma and good company", date: "Mar 20", daysLeft: 191, kind: "festival", groups: defaultGroups("Eid") },
+  { id: "christmas", name: "Christmas", tagline: "Lights, carols, and someone to share the cocoa", date: "Dec 25", daysLeft: 106, kind: "festival", groups: defaultGroups("Christmas") },
+  { id: "karvachauth", name: "Karva Chauth", tagline: "A duo day, traditionally for couples", date: "Oct 30", daysLeft: 50, kind: "duo", groups: defaultGroups("Karva Chauth") },
+  { id: "teej", name: "Teej", tagline: "Swings, sarees, and a partner to celebrate with", date: "Aug 15", daysLeft: 339, kind: "duo", groups: defaultGroups("Teej") },
+  { id: "roseday", name: "Rose Day", tagline: "Valentine's week, day 1", date: "Feb 7", daysLeft: 150, kind: "duo", groups: defaultGroups("Rose Day") },
+  { id: "proposeday", name: "Propose Day", tagline: "Valentine's week, day 2", date: "Feb 8", daysLeft: 151, kind: "duo", groups: defaultGroups("Propose Day") },
+  { id: "chocolateday", name: "Chocolate Day", tagline: "Valentine's week, day 3", date: "Feb 9", daysLeft: 152, kind: "duo", groups: defaultGroups("Chocolate Day") },
+  { id: "teddyday", name: "Teddy Day", tagline: "Valentine's week, day 4", date: "Feb 10", daysLeft: 153, kind: "duo", groups: defaultGroups("Teddy Day") },
+  { id: "promiseday", name: "Promise Day", tagline: "Valentine's week, day 5", date: "Feb 11", daysLeft: 154, kind: "duo", groups: defaultGroups("Promise Day") },
+  { id: "hugday", name: "Hug Day", tagline: "Valentine's week, day 6", date: "Feb 12", daysLeft: 155, kind: "duo", groups: defaultGroups("Hug Day") },
+  { id: "kissday", name: "Kiss Day", tagline: "Valentine's week, day 7", date: "Feb 13", daysLeft: 156, kind: "duo", groups: defaultGroups("Kiss Day") },
+  { id: "valentines", name: "Valentine's Day", tagline: "One special day, one special person", date: "Feb 14", daysLeft: 157, kind: "duo",
+    groups: [{ id: "g5", name: "Surat Valentine Mixer", members: 41, desc: "Casual mixer for singles, dinner walk-in after 7pm." }] },
+  { id: "friendship", name: "Friendship Day", tagline: "Sometimes you just need a good friend for the day", date: "Aug 2", daysLeft: 326, kind: "special",
+    groups: [{ id: "g6", name: "Friendship Day Picnic", members: 19, desc: "Park meetup, everyone brings one snack to share." }] },
+  { id: "newyear", name: "New Year's Eve", tagline: "Someone to count down with", date: "Dec 31", daysLeft: 112, kind: "special", groups: defaultGroups("New Year's Eve") },
+];
+
+const POPULAR_EVENTS = [
+  { id: "e1", name: "United Way Garba Mahotsav", place: "VR Surat Grounds", time: "Day 1 · 8:00 PM", going: 1240 },
+  { id: "e2", name: "Dandiya Night at Rangoli Ground", place: "Adajan", time: "Day 3 · 7:30 PM", going: 610 },
+  { id: "e3", name: "Kids & Family Garba", place: "Piplod Community Hall", time: "Day 5 · 6:00 PM", going: 340 },
+];
+
+const INTERESTS_POOL = ["Garba", "Dandiya", "Bollywood dance", "Classical dance", "Cooking", "Travel", "Music", "Photography", "Fitness", "Chai", "Street food", "Reading"];
+
+const INITIAL_ME = {
+  name: "Priya Mehta", age: 25, location: "Surat, Gujarat",
+  bio: "Third-generation garba enthusiast. My chaniya choli collection is out of control. Looking for a steady dandiya partner for this Navratri.",
+  interests: ["Garba", "Dandiya", "Street food", "Music"],
+  photo: null, verified: false, rating: 0, ratingCount: 0,
+};
+
+const INITIAL_NOTIFS = [
+  { id: 1, type: "reminder", text: "Navratri starts in 31 days. Time to line up a partner.", time: "2h ago" },
+  { id: 2, type: "like", text: "Someone new liked your profile.", time: "5h ago" },
+  { id: 3, type: "event", text: "Dandiya Night at Rangoli Ground is filling up fast.", time: "1d ago" },
+];
+
+const VISITORS = [PROFILES[1], PROFILES[3], PROFILES[4]];
+
+/* ---------- small building blocks ---------- */
+
+function VerifiedBadge({ size = 14 }) {
+  return <BadgeCheck size={size} color="#8A8F98" fill="#E7E9ED" style={{ flexShrink: 0 }} />;
+}
+
+function StarRow({ rating, count, size = 13 }) {
+  if (!count) return <span style={{ fontSize: 12, color: "#B8722E", fontFamily: "Manrope, sans-serif" }}>Not yet rated</span>;
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontFamily: "Manrope, sans-serif" }}>
+      <Star size={size} color="#F2A93B" fill="#F2A93B" />
+      <span style={{ fontSize: 13, color: "#5C1030", fontWeight: 700 }}>{rating.toFixed(1)}</span>
+      <span style={{ fontSize: 12, color: "#8A5A3E" }}>({count})</span>
+    </span>
+  );
+}
+
+function Avatar({ name, id, size = 52, photo }) {
+  if (photo) {
+    return <img src={photo} alt={name} style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", border: "2px solid #F2D9A8", flexShrink: 0 }} />;
+  }
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: "50%", background: colorFor(id), color: "#FBF3E6",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      fontFamily: "Fraunces, serif", fontWeight: 600, fontSize: size * 0.36,
+      flexShrink: 0, border: "2px solid #F2D9A8",
+    }}>
+      {initials(name)}
+    </div>
+  );
+}
+
+function PhotoGallery({ id, count, myPhoto }) {
+  const tiles = myPhoto ? [myPhoto, ...Array(Math.max(0, count - 1)).fill(null)] : Array(count).fill(null);
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6, marginTop: 10 }}>
+      {tiles.map((photo, i) => (
+        <div key={i} style={{
+          aspectRatio: "1", borderRadius: 10, overflow: "hidden",
+          background: photo ? "none" : `linear-gradient(150deg, ${colorFor(id + i)}, #3D0C1F)`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          {photo ? <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <ImageIcon size={18} color="rgba(251,243,230,0.55)" />}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ScallopEdge({ fill = "#3D0C1F" }) {
+  const scallops = Array.from({ length: 14 });
+  return (
+    <svg viewBox="0 0 420 16" width="100%" height="16" preserveAspectRatio="none" style={{ display: "block" }}>
+      {scallops.map((_, i) => <circle key={i} cx={(i + 0.5) * (420 / 14)} cy="0" r="11" fill={fill} />)}
+    </svg>
+  );
+}
+
+function Header({ title, onBack, right }) {
+  return (
+    <div>
+      <div style={{ background: "#3D0C1F", color: "#FBF3E6", padding: "18px 18px 14px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {onBack && <button onClick={onBack} style={iconBtnStyle}><ChevronLeft size={20} /></button>}
+          <h1 style={{ fontFamily: "Fraunces, serif", fontWeight: 600, fontSize: 22, margin: 0, letterSpacing: 0.2 }}>{title}</h1>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>{right}</div>
+      </div>
+      <ScallopEdge />
+    </div>
+  );
+}
+
+const iconBtnStyle = { background: "rgba(255,255,255,0.12)", border: "none", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", color: "#FBF3E6", cursor: "pointer" };
+
+function Tag({ children, active, onClick }) {
+  return (
+    <span onClick={onClick} style={{
+      display: "inline-block", padding: "6px 12px", borderRadius: 999, fontSize: 13, marginRight: 6, marginBottom: 6,
+      cursor: onClick ? "pointer" : "default", background: active ? "#C2185B" : "#F3E1C4", color: active ? "#FBF3E6" : "#5C1030",
+      border: active ? "1px solid #C2185B" : "1px solid #E6C591", fontFamily: "Manrope, sans-serif", fontWeight: 500,
+    }}>
+      {children}
+    </span>
+  );
+}
+
+function Toast({ text }) {
+  if (!text) return null;
+  return (
+    <div style={{ position: "absolute", bottom: 82, left: 16, right: 16, background: "#2B1018", color: "#FBF3E6", padding: "11px 16px", borderRadius: 10, fontFamily: "Manrope, sans-serif", fontSize: 13.5, textAlign: "center", boxShadow: "0 6px 18px rgba(0,0,0,0.3)", zIndex: 30 }}>
+      {text}
+    </div>
+  );
+}
+
+/* ---------- login & verification ---------- */
+
+function LoginScreen({ onDone }) {
+  const [mode, setMode] = useState("login");
+  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+
+  return (
+    <div
+      style={{
+        flex: 1, display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden",
+        background: "radial-gradient(circle at 30% 20%, #5C1030, #2B1018 65%)",
+      }}
+      onMouseMove={(e) => {
+        const r = e.currentTarget.getBoundingClientRect();
+        setTilt({ x: ((e.clientY - r.top) / r.height - 0.5) * -6, y: ((e.clientX - r.left) / r.width - 0.5) * 6 });
+      }}
+      onMouseLeave={() => setTilt({ x: 0, y: 0 })}
+    >
+      {[...Array(6)].map((_, i) => (
+        <div key={i} style={{
+          position: "absolute", width: 70 + i * 14, height: 70 + i * 14, borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(242,169,59,0.35), transparent 70%)",
+          top: `${(i * 37) % 90}%`, left: `${(i * 53) % 90}%`, filter: "blur(2px)",
+        }} />
+      ))}
+
+      <div style={{
+        position: "relative", width: "84%", maxWidth: 320, background: "linear-gradient(155deg, #F3E8D8, #FBF3E6)",
+        borderRadius: 22, padding: 26, boxShadow: "0 30px 60px rgba(0,0,0,0.45), 0 2px 0 rgba(255,255,255,0.4) inset",
+        transform: `perspective(900px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`, transition: "transform 0.15s ease-out",
+      }}>
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 6 }}>
+          <div style={{ width: 54, height: 54, borderRadius: 16, background: "#3D0C1F", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 10px 22px rgba(61,12,31,0.4)" }}>
+            <Flame size={26} color="#F2A93B" />
+          </div>
+        </div>
+        <h1 style={{ fontFamily: "Fraunces, serif", fontSize: 24, textAlign: "center", color: "#2B1018", margin: "6px 0 2px" }}>Garba Jodi</h1>
+        <p style={{ fontFamily: "Manrope, sans-serif", fontSize: 12.5, textAlign: "center", color: "#8A5A3E", marginBottom: 18 }}>Find your partner for every festival</p>
+
+        <div style={{ display: "flex", background: "#EFDFC0", borderRadius: 10, padding: 3, marginBottom: 16 }}>
+          {["login", "signup"].map((m) => (
+            <button key={m} onClick={() => setMode(m)} style={{
+              flex: 1, border: "none", borderRadius: 8, padding: "8px 0", cursor: "pointer",
+              fontFamily: "Manrope, sans-serif", fontWeight: 600, fontSize: 13,
+              background: mode === m ? "#C2185B" : "transparent", color: mode === m ? "#FBF3E6" : "#5C1030",
+            }}>
+              {m === "login" ? "Log in" : "Sign up"}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ position: "relative", marginBottom: 10 }}>
+          <Mail size={15} style={{ position: "absolute", left: 12, top: 12, color: "#B8722E" }} />
+          <input placeholder="Email or phone" style={{ ...inputStyle, paddingLeft: 34, marginBottom: 0 }} />
+        </div>
+        <div style={{ position: "relative", marginBottom: 16 }}>
+          <Lock size={15} style={{ position: "absolute", left: 12, top: 12, color: "#B8722E" }} />
+          <input type="password" placeholder="Password" style={{ ...inputStyle, paddingLeft: 34, marginBottom: 0 }} />
+        </div>
+
+        <button onClick={() => onDone(false)} style={{ ...primaryBtn, width: "100%", padding: "12px 0", fontSize: 14.5, boxShadow: "0 10px 20px rgba(194,24,91,0.35)" }}>
+          {mode === "login" ? "Log in" : "Create account"}
+        </button>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "16px 0" }}>
+          <div style={{ flex: 1, height: 1, background: "#E6C591" }} />
+          <span style={{ fontSize: 11.5, color: "#B8722E", fontFamily: "Manrope, sans-serif" }}>or</span>
+          <div style={{ flex: 1, height: 1, background: "#E6C591" }} />
+        </div>
+
+        <button onClick={() => onDone(true)} style={{ ...secondaryBtn, width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "11px 0" }}>
+          <ShieldCheck size={16} /> Continue with selfie verification
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function VerifyScreen({ onFinish }) {
+  const [step, setStep] = useState("intro");
+  const fileRef = useRef(null);
+
+  if (step === "checking") {
+    setTimeout(() => setStep("done"), 1400);
+    return (
+      <div style={centeredCol}>
+        <div style={{ width: 40, height: 40, borderRadius: "50%", border: "3px solid #E6C591", borderTopColor: "#C2185B", animation: "spin 0.9s linear infinite" }} />
+        <p style={{ fontFamily: "Manrope, sans-serif", color: "#5C1030", marginTop: 16 }}>Checking your selfie...</p>
+      </div>
+    );
+  }
+
+  if (step === "done") {
+    return (
+      <div style={centeredCol}>
+        <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#E7E9ED", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <BadgeCheck size={34} color="#8A8F98" />
+        </div>
+        <h2 style={{ fontFamily: "Fraunces, serif", fontSize: 20, color: "#2B1018", margin: "14px 0 6px" }}>You're verified</h2>
+        <p style={{ fontFamily: "Manrope, sans-serif", fontSize: 13, color: "#8A5A3E", textAlign: "center", maxWidth: 240, marginBottom: 20 }}>
+          Your gray tick is now visible on your profile so other people know it's really you.
+        </p>
+        <button onClick={() => onFinish(true)} style={{ ...primaryBtn, padding: "11px 22px" }}>Continue</button>
+      </div>
+    );
+  }
+
+  return (
+    <div style={centeredCol}>
+      <div style={{ width: 96, height: 96, borderRadius: "50%", border: "3px dashed #D9A441", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
+        <Camera size={34} color="#B8722E" />
+      </div>
+      <h2 style={{ fontFamily: "Fraunces, serif", fontSize: 20, color: "#2B1018", margin: "0 0 6px" }}>Verify it's really you</h2>
+      <p style={{ fontFamily: "Manrope, sans-serif", fontSize: 13, color: "#8A5A3E", textAlign: "center", maxWidth: 260, marginBottom: 20 }}>
+        Take a quick selfie. It's matched against your profile photo so everyone knows your profile is real.
+      </p>
+      <input ref={fileRef} type="file" accept="image/*" capture="user" style={{ display: "none" }} onChange={() => setStep("checking")} />
+      <button onClick={() => fileRef.current?.click()} style={{ ...primaryBtn, display: "flex", alignItems: "center", gap: 7, padding: "11px 20px" }}>
+        <Camera size={16} /> Take a selfie
+      </button>
+      <button onClick={() => onFinish(false)} style={{ background: "none", border: "none", color: "#8A5A3E", marginTop: 14, fontFamily: "Manrope, sans-serif", fontSize: 13, cursor: "pointer" }}>
+        Skip for now
+      </button>
+    </div>
+  );
+}
+
+const centeredCol = { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24 };
+
+/* ---------- filters ---------- */
+
+function FilterPanel({ filters, setFilters, onClose }) {
+  const [f, setF] = useState(filters);
+  return (
+    <div style={{ position: "absolute", inset: 0, background: "rgba(43,16,24,0.5)", zIndex: 35, display: "flex", alignItems: "flex-end" }}>
+      <div style={{ background: "#FBF3E6", width: "100%", borderRadius: "18px 18px 0 0", padding: 20 }}>
+        <h3 style={{ fontFamily: "Fraunces, serif", fontSize: 19, color: "#2B1018", margin: "0 0 14px" }}>Filters</h3>
+        <label style={labelStyle}>Age range</label>
+        <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+          <input type="number" value={f.minAge} onChange={(e) => setF({ ...f, minAge: Number(e.target.value) })} style={{ ...inputStyle, marginBottom: 0 }} />
+          <input type="number" value={f.maxAge} onChange={(e) => setF({ ...f, maxAge: Number(e.target.value) })} style={{ ...inputStyle, marginBottom: 0 }} />
+        </div>
+        <label style={labelStyle}>Maximum distance ({f.maxDistance} km)</label>
+        <input type="range" min="1" max="20" value={f.maxDistance} onChange={(e) => setF({ ...f, maxDistance: Number(e.target.value) })} style={{ width: "100%", marginBottom: 12, accentColor: "#C2185B" }} />
+        <label style={labelStyle}>Location contains</label>
+        <input value={f.location} onChange={(e) => setF({ ...f, location: e.target.value })} placeholder="e.g. Surat" style={inputStyle} />
+        <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+          <button onClick={() => { setFilters(f); onClose(); }} style={{ ...primaryBtn, flex: 1 }}>Apply filters</button>
+          <button onClick={onClose} style={secondaryBtn}>Cancel</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- profile detail (view someone else) ---------- */
+
+function ProfileDetail({ profile, onBack, onBlock, onReport }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  return (
+    <div style={{ flex: 1, overflowY: "auto", position: "relative" }}>
+      <div style={{ padding: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <button onClick={onBack} style={{ ...secondaryBtn, padding: "7px 12px" }}>Back</button>
+          <div style={{ position: "relative" }}>
+            <button onClick={() => setMenuOpen((v) => !v)} style={{ ...secondaryBtn, padding: "7px 9px" }}><MoreVertical size={16} /></button>
+            {menuOpen && (
+              <div style={{ position: "absolute", right: 0, top: 40, background: "#FBF3E6", border: "1px solid #E6C591", borderRadius: 10, overflow: "hidden", boxShadow: "0 8px 20px rgba(0,0,0,0.15)", zIndex: 10 }}>
+                <button onClick={() => { onReport(profile); setMenuOpen(false); }} style={menuItemStyle}><Flag size={14} /> Report</button>
+                <button onClick={() => { onBlock(profile); setMenuOpen(false); }} style={{ ...menuItemStyle, color: "#B4322C" }}><Ban size={14} /> Block</button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: 10 }}>
+          <Avatar name={profile.name} id={profile.id} size={90} />
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 10 }}>
+            <h2 style={{ fontFamily: "Fraunces, serif", fontSize: 22, margin: 0, color: "#2B1018" }}>{profile.name}, {profile.age}</h2>
+            {profile.verified && <VerifiedBadge size={18} />}
+          </div>
+          <p style={{ fontFamily: "Manrope, sans-serif", fontSize: 13, color: "#8A5A3E", display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
+            <MapPin size={13} /> {profile.location}
+          </p>
+          <div style={{ marginTop: 6 }}><StarRow rating={profile.rating} count={profile.ratingCount} /></div>
+        </div>
+
+        <PhotoGallery id={profile.id} count={profile.photos || 1} />
+
+        <div style={{ background: "#F3E8D8", border: "1px solid #E6C591", borderRadius: 14, padding: 16, marginTop: 14 }}>
+          <p style={{ fontFamily: "Manrope, sans-serif", fontSize: 14, color: "#4A2018", lineHeight: 1.5 }}>{profile.bio}</p>
+          <div style={{ marginTop: 10 }}>{profile.interests.map((t) => <Tag key={t}>{t}</Tag>)}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const menuItemStyle = { display: "flex", alignItems: "center", gap: 8, width: 150, padding: "10px 14px", background: "none", border: "none", cursor: "pointer", fontFamily: "Manrope, sans-serif", fontSize: 13.5, color: "#3D0C1F", textAlign: "left" };
+
+/* ---------- discover ---------- */
+
+function DiscoverScreen({ profiles, index, onLike, onPass, onOpenProfile, filters, setShowFilters }) {
+  const filtered = profiles.filter((p) =>
+    p.age >= filters.minAge && p.age <= filters.maxAge &&
+    parseFloat(p.distance) <= filters.maxDistance &&
+    p.location.toLowerCase().includes(filters.location.toLowerCase())
+  );
+  const profile = filtered[index];
+
+  return (
+    <div style={{ padding: 16, flex: 1, overflowY: "auto" }}>
+      <button onClick={() => setShowFilters(true)} style={{ ...secondaryBtn, display: "flex", alignItems: "center", gap: 6, marginBottom: 12 }}>
+        <SlidersHorizontal size={14} /> Filters
+      </button>
+
+      {!profile ? (
+        <div style={{ textAlign: "center", marginTop: 40, color: "#7A5A50", fontFamily: "Manrope, sans-serif" }}>
+          <Sparkles size={30} style={{ marginBottom: 10, color: "#C2185B" }} />
+          <p style={{ fontSize: 15 }}>No one matches these filters right now.</p>
+        </div>
+      ) : (
+        <div style={{ background: "#F3E8D8", borderRadius: 18, overflow: "hidden", border: "1px solid #E6C591", boxShadow: "0 8px 24px rgba(61,12,31,0.12)" }}>
+          <div onClick={() => onOpenProfile(profile)} style={{ height: 220, background: `linear-gradient(160deg, ${colorFor(profile.id)}, #3D0C1F)`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+            <Avatar name={profile.name} id={profile.id} size={96} />
+          </div>
+          <div style={{ padding: 18 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <h2 style={{ fontFamily: "Fraunces, serif", fontSize: 22, margin: 0, color: "#2B1018" }}>{profile.name}</h2>
+              <span style={{ fontFamily: "Manrope, sans-serif", fontSize: 16, color: "#7A1F3D" }}>{profile.age}</span>
+              {profile.verified && <VerifiedBadge size={16} />}
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 4, color: "#8A5A3E", fontFamily: "Manrope, sans-serif", fontSize: 13 }}>
+              <MapPin size={13} /> {profile.location} · {profile.distance}
+            </div>
+            <div style={{ marginTop: 6 }}><StarRow rating={profile.rating} count={profile.ratingCount} /></div>
+            <p style={{ fontFamily: "Manrope, sans-serif", fontSize: 14.5, color: "#4A2018", lineHeight: 1.5, marginTop: 12 }}>{profile.bio}</p>
+            <div style={{ marginTop: 12 }}>{profile.interests.map((t) => <Tag key={t}>{t}</Tag>)}</div>
+            <button onClick={() => onOpenProfile(profile)} style={{ ...secondaryBtn, marginTop: 6, display: "flex", alignItems: "center", gap: 6 }}>
+              <Eye size={14} /> View full profile
+            </button>
+          </div>
+        </div>
+      )}
+
+      {profile && (
+        <div style={{ display: "flex", justifyContent: "center", gap: 22, marginTop: 22 }}>
+          <button onClick={() => onPass(profile)} style={{ width: 58, height: 58, borderRadius: "50%", border: "2px solid #D9A441", background: "#FBF3E6", color: "#8A5A3E", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+            <X size={26} />
+          </button>
+          <button onClick={() => onLike(profile)} style={{ width: 58, height: 58, borderRadius: "50%", border: "none", background: "#C2185B", color: "#FBF3E6", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 6px 16px rgba(194,24,91,0.4)" }}>
+            <Heart size={26} fill="#FBF3E6" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------- festivals ---------- */
+
+function FestivalsScreen({ festival, setFestival, groups, setGroups }) {
+  const [joined, setJoined] = useState({});
+  const [creating, setCreating] = useState(false);
+  const [newGroup, setNewGroup] = useState({ name: "", desc: "" });
+
+  if (festival) {
+    const list = groups[festival.id] || festival.groups;
+    return (
+      <div style={{ padding: 16, flex: 1, overflowY: "auto" }}>
+        <div style={{ background: "#3D0C1F", color: "#FBF3E6", borderRadius: 16, padding: 18, marginBottom: 16 }}>
+          <h2 style={{ fontFamily: "Fraunces, serif", fontSize: 24, margin: 0 }}>{festival.name}</h2>
+          <p style={{ fontFamily: "Manrope, sans-serif", fontSize: 13.5, opacity: 0.85, marginTop: 4 }}>{festival.tagline}</p>
+          <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 10, fontSize: 13, fontFamily: "Manrope, sans-serif" }}>
+            <Clock size={14} /> {festival.date} · {festival.daysLeft} days left
+          </div>
+          <button style={{ marginTop: 14, background: "#F2A93B", color: "#3D0C1F", border: "none", padding: "10px 16px", borderRadius: 10, fontFamily: "Manrope, sans-serif", fontWeight: 600, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+            <Heart size={15} /> Find a partner for {festival.name}
+          </button>
+        </div>
+
+        {festival.kind === "festival" && (
+          <>
+            <h3 style={sectionTitle}>Popular events nearby</h3>
+            {POPULAR_EVENTS.map((e) => (
+              <div key={e.id} style={eventCard}>
+                <div>
+                  <p style={{ fontFamily: "Manrope, sans-serif", fontWeight: 600, fontSize: 14.5, margin: 0, color: "#2B1018" }}>{e.name}</p>
+                  <p style={{ fontFamily: "Manrope, sans-serif", fontSize: 12.5, color: "#8A5A3E", margin: "3px 0 0" }}>{e.place} · {e.time}</p>
+                </div>
+                <span style={{ fontSize: 12, color: "#C2185B", fontFamily: "Manrope, sans-serif", fontWeight: 600 }}>{e.going} going</span>
+              </div>
+            ))}
+          </>
+        )}
+
+        <h3 style={sectionTitle}>Groups for {festival.name}</h3>
+        {list.map((g) => (
+          <div key={g.id} style={groupCard}>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontFamily: "Manrope, sans-serif", fontWeight: 600, fontSize: 14.5, margin: 0, color: "#2B1018" }}>{g.name}</p>
+              <p style={{ fontFamily: "Manrope, sans-serif", fontSize: 12.5, color: "#8A5A3E", margin: "3px 0 0" }}>{g.desc}</p>
+              <p style={{ fontFamily: "Manrope, sans-serif", fontSize: 12, color: "#B8722E", margin: "4px 0 0" }}><Users size={11} style={{ verticalAlign: -1 }} /> {g.members + (joined[g.id] ? 1 : 0)} members</p>
+            </div>
+            <button onClick={() => setJoined((j) => ({ ...j, [g.id]: !j[g.id] }))} style={{ border: "none", borderRadius: 8, padding: "7px 12px", fontFamily: "Manrope, sans-serif", fontSize: 12.5, fontWeight: 600, cursor: "pointer", background: joined[g.id] ? "#E6C591" : "#C2185B", color: joined[g.id] ? "#5C1030" : "#FBF3E6" }}>
+              {joined[g.id] ? "Joined" : "Join"}
+            </button>
+          </div>
+        ))}
+
+        {creating ? (
+          <div style={{ ...groupCard, flexDirection: "column", alignItems: "stretch", gap: 8 }}>
+            <input placeholder="Group name" value={newGroup.name} onChange={(e) => setNewGroup((g) => ({ ...g, name: e.target.value }))} style={inputStyle} />
+            <input placeholder="What's it about?" value={newGroup.desc} onChange={(e) => setNewGroup((g) => ({ ...g, desc: e.target.value }))} style={inputStyle} />
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => {
+                if (!newGroup.name.trim()) return;
+                setGroups((prev) => ({ ...prev, [festival.id]: [...(prev[festival.id] || festival.groups), { id: `custom-${Date.now()}`, name: newGroup.name, members: 1, desc: newGroup.desc || "No description yet." }] }));
+                setNewGroup({ name: "", desc: "" }); setCreating(false);
+              }} style={primaryBtn}>Create group</button>
+              <button onClick={() => setCreating(false)} style={secondaryBtn}>Cancel</button>
+            </div>
+          </div>
+        ) : (
+          <button onClick={() => setCreating(true)} style={{ ...secondaryBtn, width: "100%", marginTop: 4, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+            <Plus size={15} /> Create a group for {festival.name}
+          </button>
+        )}
+
+        <button onClick={() => setFestival(null)} style={{ ...secondaryBtn, width: "100%", marginTop: 14 }}>Back to all festivals</button>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ padding: 16, flex: 1, overflowY: "auto" }}>
+      <h3 style={sectionTitle}>Upcoming festivals</h3>
+      {FESTIVALS.filter((f) => f.kind === "festival").map((f) => <FestivalRow key={f.id} f={f} onOpen={() => setFestival(f)} />)}
+      <h3 style={sectionTitle}>Duo days</h3>
+      {FESTIVALS.filter((f) => f.kind === "duo").map((f) => <FestivalRow key={f.id} f={f} onOpen={() => setFestival(f)} />)}
+      <h3 style={sectionTitle}>Special days</h3>
+      {FESTIVALS.filter((f) => f.kind === "special").map((f) => <FestivalRow key={f.id} f={f} onOpen={() => setFestival(f)} />)}
+    </div>
+  );
+}
+
+function FestivalRow({ f, onOpen }) {
+  return (
+    <div onClick={onOpen} style={{ display: "flex", alignItems: "center", gap: 12, background: "#F3E8D8", border: "1px solid #E6C591", borderRadius: 12, padding: 12, marginBottom: 10, cursor: "pointer" }}>
+      <div style={{ width: 44, height: 44, borderRadius: 10, background: "#3D0C1F", color: "#F2A93B", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        {f.kind === "festival" ? <Flame size={20} /> : <Sparkles size={20} />}
+      </div>
+      <div style={{ flex: 1 }}>
+        <p style={{ fontFamily: "Manrope, sans-serif", fontWeight: 600, fontSize: 14.5, margin: 0, color: "#2B1018" }}>{f.name}</p>
+        <p style={{ fontFamily: "Manrope, sans-serif", fontSize: 12.5, color: "#8A5A3E", margin: "2px 0 0" }}>{f.date} · {f.daysLeft} days left</p>
+      </div>
+      <ChevronLeft size={16} style={{ transform: "rotate(180deg)", color: "#B8722E" }} />
+    </div>
+  );
+}
+
+/* ---------- chat ---------- */
+
+function RateModal({ match, onSubmit, onClose }) {
+  const [stars, setStars] = useState(0);
+  return (
+    <div style={{ position: "absolute", inset: 0, background: "rgba(43,16,24,0.6)", zIndex: 40, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div style={{ background: "#FBF3E6", borderRadius: 16, padding: 22, width: "100%", maxWidth: 300, textAlign: "center" }}>
+        <h3 style={{ fontFamily: "Fraunces, serif", fontSize: 18, color: "#2B1018", margin: "0 0 6px" }}>Rate {match.name}</h3>
+        <p style={{ fontFamily: "Manrope, sans-serif", fontSize: 12.5, color: "#8A5A3E", marginBottom: 14 }}>How was your meetup or chat with them?</p>
+        <div style={{ display: "flex", justifyContent: "center", gap: 6, marginBottom: 18 }}>
+          {[1, 2, 3, 4, 5].map((n) => (
+            <Star key={n} size={26} color="#F2A93B" fill={n <= stars ? "#F2A93B" : "none"} style={{ cursor: "pointer" }} onClick={() => setStars(n)} />
+          ))}
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button style={{ ...primaryBtn, flex: 1 }} onClick={() => { if (stars) onSubmit(stars); }}>Submit rating</button>
+          <button style={secondaryBtn} onClick={onClose}>Cancel</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ChatScreen({ matches, activeId, setActiveId, conversations, sendMessage, onBlock, onReport, onRate }) {
+  const [draft, setDraft] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [rating, setRating] = useState(false);
+  const fileRef = useRef(null);
+
+  if (activeId) {
+    const match = matches.find((m) => m.id === activeId);
+    if (!match) { setActiveId(null); return null; }
+    const msgs = conversations[activeId] || [];
+    return (
+      <div style={{ display: "flex", flexDirection: "column", flex: 1, position: "relative" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderBottom: "1px solid #E6C591" }}>
+          <button onClick={() => setActiveId(null)} style={{ ...iconBtnStyle, background: "#F3E1C4", color: "#5C1030" }}><ChevronLeft size={18} /></button>
+          <Avatar name={match.name} id={match.id} size={38} />
+          <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 5 }}>
+            <p style={{ fontFamily: "Manrope, sans-serif", fontWeight: 600, fontSize: 15, color: "#2B1018", margin: 0 }}>{match.name}</p>
+            {match.verified && <VerifiedBadge size={14} />}
+          </div>
+          <button onClick={() => onBlock(match)} title="Block" style={{ ...iconBtnStyle, background: "#F3E1C4", color: "#B4322C" }}><Ban size={16} /></button>
+          <div style={{ position: "relative" }}>
+            <button onClick={() => setMenuOpen((v) => !v)} style={{ ...iconBtnStyle, background: "#F3E1C4", color: "#5C1030" }}><MoreVertical size={16} /></button>
+            {menuOpen && (
+              <div style={{ position: "absolute", right: 0, top: 40, background: "#FBF3E6", border: "1px solid #E6C591", borderRadius: 10, overflow: "hidden", boxShadow: "0 8px 20px rgba(0,0,0,0.15)", zIndex: 10 }}>
+                <button onClick={() => { onReport(match); setMenuOpen(false); }} style={menuItemStyle}><Flag size={14} /> Report</button>
+                <button onClick={() => { setRating(true); setMenuOpen(false); }} style={menuItemStyle}><Star size={14} /> Rate this person</button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div style={{ flex: 1, overflowY: "auto", padding: 14, display: "flex", flexDirection: "column", gap: 8 }}>
+          {msgs.length === 0 && <p style={{ textAlign: "center", color: "#B8722E", fontFamily: "Manrope, sans-serif", fontSize: 13, marginTop: 30 }}>You matched with {match.name}. Say hello!</p>}
+          {msgs.map((m, i) => (
+            <div key={i} style={{ alignSelf: m.from === "me" ? "flex-end" : "flex-start", maxWidth: "75%" }}>
+              {m.kind === "image" && <img src={m.url} alt="attachment" style={{ width: "100%", borderRadius: 12 }} />}
+              {m.kind === "video" && <video src={m.url} controls style={{ width: "100%", borderRadius: 12 }} />}
+              {m.text && (
+                <div style={{ background: m.from === "me" ? "#C2185B" : "#F3E1C4", color: m.from === "me" ? "#FBF3E6" : "#2B1018", padding: "8px 13px", borderRadius: 14, fontFamily: "Manrope, sans-serif", fontSize: 14, marginTop: m.kind ? 4 : 0 }}>
+                  {m.text}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display: "flex", gap: 8, padding: 12, borderTop: "1px solid #E6C591", alignItems: "center" }}>
+          <input ref={fileRef} type="file" accept="image/*,video/*" style={{ display: "none" }} onChange={(e) => {
+            const file = e.target.files?.[0]; if (!file) return;
+            const url = URL.createObjectURL(file);
+            sendMessage(activeId, { from: "me", kind: file.type.startsWith("video") ? "video" : "image", url });
+            e.target.value = "";
+          }} />
+          <button onClick={() => fileRef.current?.click()} style={{ ...iconBtnStyle, background: "#F3E1C4", color: "#5C1030" }}><Paperclip size={16} /></button>
+          <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Type a message" style={{ ...inputStyle, flex: 1, margin: 0 }} />
+          <button onClick={() => { if (draft.trim()) { sendMessage(activeId, { from: "me", text: draft.trim() }); setDraft(""); } }} style={{ ...primaryBtn, padding: "0 14px", display: "flex", alignItems: "center", height: 38 }}>
+            <Send size={16} />
+          </button>
+        </div>
+
+        {rating && <RateModal match={match} onClose={() => setRating(false)} onSubmit={(n) => { onRate(match, n); setRating(false); }} />}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ padding: 16, flex: 1, overflowY: "auto" }}>
+      {matches.length === 0 ? (
+        <div style={{ textAlign: "center", marginTop: 60, color: "#7A5A50", fontFamily: "Manrope, sans-serif" }}>
+          <MessageCircle size={30} style={{ marginBottom: 10, color: "#C2185B" }} />
+          <p style={{ fontSize: 15 }}>No matches yet.</p>
+          <p style={{ fontSize: 13 }}>Keep swiping on Discover, your first match is close.</p>
+        </div>
+      ) : (
+        matches.map((m) => {
+          const last = (conversations[m.id] || []).slice(-1)[0];
+          const preview = last ? (last.text || (last.kind === "image" ? "Photo" : "Video")) : "You matched. Say hello!";
+          return (
+            <div key={m.id} onClick={() => setActiveId(m.id)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 6px", borderBottom: "1px solid #EFDFC0", cursor: "pointer" }}>
+              <Avatar name={m.name} id={m.id} size={46} />
+              <div style={{ flex: 1 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                  <p style={{ fontFamily: "Manrope, sans-serif", fontWeight: 600, fontSize: 14.5, margin: 0, color: "#2B1018" }}>{m.name}</p>
+                  {m.verified && <VerifiedBadge size={13} />}
+                </div>
+                <p style={{ fontFamily: "Manrope, sans-serif", fontSize: 13, color: "#8A5A3E", margin: "2px 0 0" }}>{preview}</p>
+              </div>
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
+/* ---------- notifications ---------- */
+
+function NotificationsScreen({ notifications }) {
+  const iconFor = (type) => {
+    if (type === "match") return <Heart size={16} color="#C2185B" />;
+    if (type === "like") return <Sparkles size={16} color="#F2A93B" />;
+    if (type === "event") return <Calendar size={16} color="#7A1F3D" />;
+    if (type === "visit") return <Eye size={16} color="#7A1F3D" />;
+    return <Bell size={16} color="#8A5A3E" />;
+  };
+  return (
+    <div style={{ padding: 16, flex: 1, overflowY: "auto" }}>
+      {notifications.map((n) => (
+        <div key={n.id} style={{ display: "flex", gap: 12, padding: "12px 6px", borderBottom: "1px solid #EFDFC0" }}>
+          <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#F3E1C4", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{iconFor(n.type)}</div>
+          <div>
+            <p style={{ fontFamily: "Manrope, sans-serif", fontSize: 14, color: "#2B1018", margin: 0 }}>{n.text}</p>
+            <p style={{ fontFamily: "Manrope, sans-serif", fontSize: 12, color: "#B8722E", margin: "2px 0 0" }}>{n.time}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ---------- profile (self) ---------- */
+
+function ProfileScreen({ me, setMe, onStartVerify }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(me);
+  const fileRef = useRef(null);
+  const [showVisitors, setShowVisitors] = useState(false);
+
+  if (editing) {
+    return (
+      <div style={{ padding: 16, flex: 1, overflowY: "auto" }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 14 }}>
+          <div style={{ position: "relative" }}>
+            <Avatar name={draft.name} id={7} size={84} photo={draft.photo} />
+            <button onClick={() => fileRef.current?.click()} style={{ position: "absolute", bottom: -2, right: -2, width: 28, height: 28, borderRadius: "50%", background: "#C2185B", border: "2px solid #FBF3E6", color: "#FBF3E6", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+              <Pencil size={13} />
+            </button>
+            <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
+              const file = e.target.files?.[0]; if (!file) return;
+              setDraft((d) => ({ ...d, photo: URL.createObjectURL(file) }));
+            }} />
+          </div>
+          <p style={{ fontFamily: "Manrope, sans-serif", fontSize: 12, color: "#8A5A3E", marginTop: 6 }}>Tap the pencil to upload a profile photo</p>
+        </div>
+        <label style={labelStyle}>Name</label>
+        <input style={inputStyle} value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+        <label style={labelStyle}>Age</label>
+        <input style={inputStyle} type="number" value={draft.age} onChange={(e) => setDraft({ ...draft, age: Number(e.target.value) })} />
+        <label style={labelStyle}>Location</label>
+        <input style={inputStyle} value={draft.location} onChange={(e) => setDraft({ ...draft, location: e.target.value })} />
+        <label style={labelStyle}>Bio</label>
+        <textarea style={{ ...inputStyle, height: 80, resize: "none" }} value={draft.bio} onChange={(e) => setDraft({ ...draft, bio: e.target.value })} />
+        <label style={labelStyle}>Interests</label>
+        <div style={{ marginBottom: 14 }}>
+          {INTERESTS_POOL.map((t) => (
+            <Tag key={t} active={draft.interests.includes(t)} onClick={() => setDraft((d) => ({ ...d, interests: d.interests.includes(t) ? d.interests.filter((x) => x !== t) : [...d.interests, t] }))}>{t}</Tag>
+          ))}
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button style={primaryBtn} onClick={() => { setMe(draft); setEditing(false); }}><Check size={15} style={{ marginRight: 5, verticalAlign: -2 }} /> Save changes</button>
+          <button style={secondaryBtn} onClick={() => { setDraft(me); setEditing(false); }}>Cancel</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ padding: 16, flex: 1, overflowY: "auto" }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 16 }}>
+        <Avatar name={me.name} id={7} size={90} photo={me.photo} />
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 10 }}>
+          <h2 style={{ fontFamily: "Fraunces, serif", fontSize: 22, margin: 0, color: "#2B1018" }}>{me.name}, {me.age}</h2>
+          {me.verified && <VerifiedBadge size={17} />}
+        </div>
+        <p style={{ fontFamily: "Manrope, sans-serif", fontSize: 13, color: "#8A5A3E", display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}><MapPin size={13} /> {me.location}</p>
+        <div style={{ marginTop: 6 }}><StarRow rating={me.rating} count={me.ratingCount} /></div>
+        {!me.verified && (
+          <button onClick={onStartVerify} style={{ ...secondaryBtn, marginTop: 10, display: "flex", alignItems: "center", gap: 6 }}>
+            <ShieldCheck size={14} /> Get verified
+          </button>
+        )}
+      </div>
+
+      <PhotoGallery id={7} count={3} myPhoto={me.photo} />
+
+      <div style={{ background: "#F3E8D8", border: "1px solid #E6C591", borderRadius: 14, padding: 16, marginTop: 14 }}>
+        <p style={{ fontFamily: "Manrope, sans-serif", fontSize: 14, color: "#4A2018", lineHeight: 1.5 }}>{me.bio}</p>
+        <div style={{ marginTop: 10 }}>{me.interests.map((t) => <Tag key={t}>{t}</Tag>)}</div>
+      </div>
+
+      <div onClick={() => setShowVisitors((v) => !v)} style={{ ...groupCard, marginTop: 14, cursor: "pointer" }}>
+        <div style={{ width: 40, height: 40, borderRadius: 10, background: "#3D0C1F", color: "#F2A93B", display: "flex", alignItems: "center", justifyContent: "center" }}><Eye size={18} /></div>
+        <div style={{ flex: 1 }}>
+          <p style={{ fontFamily: "Manrope, sans-serif", fontWeight: 600, fontSize: 14.5, margin: 0, color: "#2B1018" }}>Who viewed your profile</p>
+          <p style={{ fontFamily: "Manrope, sans-serif", fontSize: 12.5, color: "#8A5A3E", margin: "2px 0 0" }}>{VISITORS.length} people this week</p>
+        </div>
+      </div>
+      {showVisitors && VISITORS.map((v) => (
+        <div key={v.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 6px" }}>
+          <Avatar name={v.name} id={v.id} size={36} />
+          <p style={{ fontFamily: "Manrope, sans-serif", fontSize: 13.5, color: "#2B1018", margin: 0 }}>{v.name}</p>
+          {v.verified && <VerifiedBadge size={13} />}
+        </div>
+      ))}
+
+      <button onClick={() => { setDraft(me); setEditing(true); }} style={{ ...primaryBtn, width: "100%", marginTop: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+        <Pencil size={15} /> Edit profile
+      </button>
+    </div>
+  );
+}
+
+/* ---------- shared style bits ---------- */
+
+const sectionTitle = { fontFamily: "Fraunces, serif", fontSize: 16, color: "#3D0C1F", margin: "6px 0 10px" };
+const eventCard = { display: "flex", justifyContent: "space-between", alignItems: "center", background: "#F3E8D8", border: "1px solid #E6C591", borderRadius: 12, padding: 12, marginBottom: 8 };
+const groupCard = { display: "flex", alignItems: "center", gap: 10, background: "#F3E8D8", border: "1px solid #E6C591", borderRadius: 12, padding: 12, marginBottom: 8 };
+const inputStyle = { width: "100%", boxSizing: "border-box", padding: "9px 12px", borderRadius: 9, border: "1px solid #E6C591", background: "#FBF3E6", fontFamily: "Manrope, sans-serif", fontSize: 14, marginBottom: 10, color: "#2B1018" };
+const labelStyle = { fontFamily: "Manrope, sans-serif", fontSize: 12.5, color: "#8A5A3E", fontWeight: 600, display: "block", marginBottom: 4 };
+const primaryBtn = { background: "#C2185B", color: "#FBF3E6", border: "none", borderRadius: 9, padding: "10px 14px", fontFamily: "Manrope, sans-serif", fontWeight: 600, fontSize: 13.5, cursor: "pointer" };
+const secondaryBtn = { background: "#F3E1C4", color: "#5C1030", border: "1px solid #E6C591", borderRadius: 9, padding: "10px 14px", fontFamily: "Manrope, sans-serif", fontWeight: 600, fontSize: 13.5, cursor: "pointer" };
+
+/* ---------- app shell ---------- */
+
+const NAV = [
+  { id: "discover", label: "Discover", icon: Heart },
+  { id: "festivals", label: "Festivals", icon: Calendar },
+  { id: "chat", label: "Chat", icon: MessageCircle },
+  { id: "alerts", label: "Alerts", icon: Bell },
+  { id: "profile", label: "Profile", icon: User },
+];
+
+export default function GarbaPartnerApp() {
+  const [authStage, setAuthStage] = useState("login"); // login -> verify -> app
+  const [tab, setTab] = useState("discover");
+  const [profileIndex, setProfileIndex] = useState(0);
+  const [matches, setMatches] = useState([]);
+  const [conversations, setConversations] = useState({});
+  const [activeChatId, setActiveChatId] = useState(null);
+  const [notifications, setNotifications] = useState(INITIAL_NOTIFS);
+  const [me, setMe] = useState(INITIAL_ME);
+  const [festival, setFestival] = useState(null);
+  const [groupsByFestival, setGroupsByFestival] = useState({});
+  const [toast, setToast] = useState("");
+  const [matchModal, setMatchModal] = useState(null);
+  const [openProfile, setOpenProfile] = useState(null);
+  const [blocked, setBlocked] = useState([]);
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({ minAge: 18, maxAge: 45, maxDistance: 20, location: "" });
+
+  const flashToast = (text) => { setToast(text); setTimeout(() => setToast(""), 2200); };
+
+  const visibleProfiles = PROFILES.filter((p) => !blocked.includes(p.id));
+
+  const handleLike = (profile) => {
+    if (profile.willMatch && !matches.find((m) => m.id === profile.id)) {
+      setMatches((prev) => [...prev, profile]);
+      setNotifications((prev) => [{ id: Date.now(), type: "match", text: `You matched with ${profile.name}!`, time: "Just now" }, ...prev]);
+      setMatchModal(profile);
+    } else {
+      flashToast(`Liked ${profile.name}. We'll let you know if it's a match.`);
+      setNotifications((prev) => [{ id: Date.now(), type: "like", text: `You liked ${profile.name}. No match yet.`, time: "Just now" }, ...prev]);
+    }
+    setProfileIndex((i) => i + 1);
+  };
+
+  const handlePass = (profile) => { flashToast(`Passed on ${profile.name}.`); setProfileIndex((i) => i + 1); };
+  const sendMessage = (matchId, msg) => setConversations((prev) => ({ ...prev, [matchId]: [...(prev[matchId] || []), msg] }));
+  const handleBlock = (profile) => {
+    setBlocked((prev) => [...prev, profile.id]);
+    setMatches((prev) => prev.filter((m) => m.id !== profile.id));
+    if (activeChatId === profile.id) setActiveChatId(null);
+    setOpenProfile(null);
+    flashToast(`${profile.name} has been blocked.`);
+  };
+  const handleReport = (profile) => flashToast(`${profile.name} reported. Our team will review this.`);
+  const handleRate = (profile, stars) => {
+    const newCount = profile.ratingCount + 1;
+    const newRating = ((profile.rating * profile.ratingCount) + stars) / newCount;
+    profile.rating = newRating; profile.ratingCount = newCount;
+    flashToast(`You rated ${profile.name} ${stars} star${stars > 1 ? "s" : ""}.`);
+  };
+
+  if (authStage === "login") {
+    return (
+      <div className="app-outer">
+        <style>{fontStyle}</style>
+        <div className="app-frame" style={appFrameStyle}>
+          <LoginScreen onDone={(wantsVerify) => setAuthStage(wantsVerify ? "verify" : "app")} />
+        </div>
+      </div>
+    );
+  }
+  if (authStage === "verify") {
+    return (
+      <div className="app-outer">
+        <style>{fontStyle}</style>
+        <div className="app-frame" style={appFrameStyle}>
+          <VerifyScreen onFinish={(verified) => { if (verified) setMe((m) => ({ ...m, verified: true })); setAuthStage("app"); }} />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="app-outer">
+      <style>{fontStyle}</style>
+      <div className="app-frame" style={appFrameStyle}>
+
+      <Header
+        title={openProfile ? "Profile" : tab === "discover" ? "Nearby" : tab === "festivals" ? (festival ? festival.name : "Festivals") : tab === "chat" ? (activeChatId ? "" : "Messages") : tab === "alerts" ? "Notifications" : "Your profile"}
+      />
+
+      {openProfile ? (
+        <ProfileDetail profile={openProfile} onBack={() => setOpenProfile(null)} onBlock={handleBlock} onReport={handleReport} />
+      ) : (
+        <>
+          {tab === "discover" && (
+            <DiscoverScreen profiles={visibleProfiles} index={profileIndex} onLike={handleLike} onPass={handlePass} onOpenProfile={setOpenProfile} filters={filters} setShowFilters={setShowFilters} />
+          )}
+          {tab === "festivals" && <FestivalsScreen festival={festival} setFestival={setFestival} groups={groupsByFestival} setGroups={setGroupsByFestival} />}
+          {tab === "chat" && (
+            <ChatScreen matches={matches} activeId={activeChatId} setActiveId={setActiveChatId} conversations={conversations} sendMessage={sendMessage} onBlock={handleBlock} onReport={handleReport} onRate={handleRate} />
+          )}
+          {tab === "alerts" && <NotificationsScreen notifications={notifications} />}
+          {tab === "profile" && <ProfileScreen me={me} setMe={setMe} onStartVerify={() => setAuthStage("verify")} />}
+        </>
+      )}
+
+      <Toast text={toast} />
+      {showFilters && <FilterPanel filters={filters} setFilters={(f) => { setFilters(f); setProfileIndex(0); }} onClose={() => setShowFilters(false)} />}
+
+      {matchModal && (
+        <div style={{ position: "absolute", inset: 0, background: "rgba(43,16,24,0.85)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", zIndex: 40, padding: 24, textAlign: "center" }}>
+          <Sparkles size={34} color="#F2A93B" />
+          <h2 style={{ fontFamily: "Fraunces, serif", color: "#FBF3E6", fontSize: 28, margin: "10px 0 4px" }}>It's a match!</h2>
+          <p style={{ color: "#F3E1C4", fontFamily: "Manrope, sans-serif", fontSize: 14, marginBottom: 20 }}>You and {matchModal.name} both liked each other.</p>
+          <div style={{ display: "flex", alignItems: "center", marginBottom: 22 }}>
+            <Avatar name={me.name} id={7} size={64} photo={me.photo} />
+            <div style={{ width: 20 }} />
+            <Avatar name={matchModal.name} id={matchModal.id} size={64} />
+          </div>
+          <button onClick={() => { setActiveChatId(matchModal.id); setTab("chat"); setMatchModal(null); }} style={{ ...primaryBtn, padding: "11px 22px", fontSize: 14.5 }}>Send a message</button>
+          <button onClick={() => setMatchModal(null)} style={{ background: "none", border: "none", color: "#F3E1C4", marginTop: 12, fontFamily: "Manrope, sans-serif", fontSize: 13, cursor: "pointer" }}>Keep browsing</button>
+        </div>
+      )}
+
+      <div style={{ display: "flex", borderTop: "1px solid #E6C591", background: "#FBF3E6", paddingBottom: 6, paddingTop: 6 }}>
+        {NAV.map((n) => {
+          const Icon = n.icon;
+          const active = tab === n.id && !openProfile;
+          return (
+            <button key={n.id} onClick={() => { setTab(n.id); setOpenProfile(null); if (n.id !== "festivals") setFestival(null); if (n.id !== "chat") setActiveChatId(null); }} style={{ flex: 1, background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: "4px 0", color: active ? "#C2185B" : "#B8722E" }}>
+              <Icon size={20} fill={active && n.id === "discover" ? "#C2185B" : "none"} />
+              <span style={{ fontSize: 11, fontFamily: "Manrope, sans-serif", fontWeight: active ? 700 : 500 }}>{n.label}</span>
+            </button>
+          );
+        })}
+      </div>
+      </div>
+    </div>
+  );
+}
+
+const fontStyle = `
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap');
+  * { box-sizing: border-box; }
+  input:focus, textarea:focus { outline: 2px solid #C2185B; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .app-outer { width: 100%; min-height: 100dvh; display: flex; align-items: center; justify-content: center; background: #2B1018; }
+  @media (max-width: 520px) {
+    .app-frame { border-radius: 0 !important; height: 100dvh !important; width: 100vw !important; box-shadow: none !important; }
+  }
+`;
+
+const appFrameStyle = {
+  maxWidth: 420, width: "100%", margin: "0 auto", height: 720, display: "flex", flexDirection: "column",
+  background: "#FBF3E6", borderRadius: 22, overflow: "hidden", position: "relative",
+  boxShadow: "0 20px 50px rgba(61,12,31,0.25)", fontFamily: "Manrope, sans-serif",
+};
